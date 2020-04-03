@@ -9,11 +9,13 @@ out vec3 FragPos;
 
 // Values that stay constant for the whole mesh.
 uniform mat4 MVP;
+uniform mat4 model;
   
 void main(){
   // Output position of the vertex, in clip space : MVP * position
   gl_Position = MVP * vec4(vertexPosition_modelspace,1);
   //gl_Position = vec4(vertexPosition_modelspace,1);
   //FragPos = vec3(model * vec4(position, 1.0f));
-  Normal = normals;
+  //Normal = model * vec4(normals, 0);
+  //Normal = normals;
 }

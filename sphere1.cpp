@@ -304,21 +304,13 @@ int main(){
 	GLuint programID = LoadShaders( "SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader" );
 
 	ply_reader ply;
-	ply.ply_load("sphere.ply");
+	ply.ply_load("tetra.ply");
 
-	GLuint vao, vbo, ibo;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+
 
 	vector<point> points = ply.get_element_face_points();
 
-	//vector<GLfloat> vertex = ply.get_vertex();
-	vector<GLfloat> vertex;
-	for (int i = 0; i < points.size(); i++) {
-		vertex.push_back(points[i].x);
-		vertex.push_back(points[i].y);
-		vertex.push_back(points[i].z);
-	}
+	vector<GLfloat> vertex = ply.get_vertex();
 	vector<GLushort> indices = ply.get_indices();
 	vector<point> norm = ply.get_normal_vector();
 	vector<GLfloat> normVertex;
@@ -329,15 +321,28 @@ int main(){
 		normVertex.push_back(y);
 		normVertex.push_back(z);
 	}
+	GLuint vao, vbo[2], ibo;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
 
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glGenBuffers(2, vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GLfloat), &vertex[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+	glEnableVertexAttribArray(0);
 
-	GLuint normalbuffer;
-	glGenBuffers(1, &normalbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 	glBufferData(GL_ARRAY_BUFFER, normVertex.size() * sizeof(GLfloat), &normVertex[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void *)0);
+    	glEnableVertexAttribArray(1);
+
+	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, vbo[2] );
+    	glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLushort), indices.data(), GL_STATIC_DRAW );
+
+	glBindVertexArray(0);
+    	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
 	glBindVertexArray(vao);
 	GLfloat rot = 45.0f;
 	do {
@@ -352,7 +357,7 @@ int main(){
 
 		// Camera matrix
 		glm::mat4 View = glm::lookAt(
-				glm::vec3(4,3,3), // Camera is at (4,3,3), in World Space
+				glm::vec3(140,130,130), // Camera is at (4,3,3), in World Space
 				glm::vec3(0,0,0), // and looks at the origin
 				glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
 				);
@@ -373,7 +378,7 @@ int main(){
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
 		GLuint ModelID = glGetUniformLocation(programID, "model");
 		glUniformMatrix4fv(ModelID, 1, GL_FALSE, &Model[0][0]);
-
+#if 0
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
 
@@ -381,9 +386,11 @@ int main(){
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void*)0);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glDrawArrays(GL_TRIANGLES, 0, vertex.size()); 		
-		glDisableVertexAttribArray(0);
-		glDisableVertexAttribArray(1);
+#endif
+		//glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, (void *)0);
+		glDrawArrays(GL_TRIANGLES, 0, vertex.size() * indices.size()); 		
+		//glDisableVertexAttribArray(0);
+		//glDisableVertexAttribArray(1);
 		// Swap buffers
 
 		glfwSwapBuffers(window);
@@ -394,7 +401,9 @@ int main(){
 			glfwWindowShouldClose(window) == 0 );
 
 	glDeleteBuffers(1, &vao);
-	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &vbo[0]);
+	glDeleteBuffers(1, &vbo[1]);
+	glDeleteBuffers(1, &vbo[2]);
 	glDeleteBuffers(1, &ibo);
 	glDeleteProgram(programID);
 
