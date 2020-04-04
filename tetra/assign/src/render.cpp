@@ -121,7 +121,6 @@ void render::buildData(ply_parser *parser, int f) {
 void render::drawTetra(ply_parser *parser, int f) {
 
 	points = parser->get_element_face_points();
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (f != prev_f) {
 		buildData(parser, f);
 		f = prev_f;

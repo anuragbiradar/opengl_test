@@ -19,6 +19,28 @@ using namespace std;
 #define SCR_WIDTH 800
 #define SCR_HEIGHT 600
 
+GLenum glCheckError_(const char *file, int line)
+{
+        GLenum errorCode;
+        while ((errorCode = glGetError()) != GL_NO_ERROR)
+        {
+                std::string error;
+                switch (errorCode)
+                {
+                        case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
+                        case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
+                        case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
+                        case GL_STACK_OVERFLOW:                error = "STACK_OVERFLOW"; break;
+                        case GL_STACK_UNDERFLOW:               error = "STACK_UNDERFLOW"; break;
+                        case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
+                        case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
+                }
+                std::cout << error << " | " << file << " (" << line << ")" << std::endl;
+        }
+        return errorCode;
+}
+#define glCheckError() glCheckError_(__FILE__, __LINE__)
+
 class point {
 	public:
 		GLfloat x, y, z;
@@ -296,23 +318,28 @@ int main(){
 		fprintf(stderr, "Failed to initialize GLEW\n");
 		return -1;
 	}
-
+	glCheckError();
 	// Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
+	glCheckError();
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader" );
 
+	glCheckError();
 	ply_reader ply;
-	ply.ply_load("tetra.ply");
+	//ply.ply_load("tetra.ply");
+	ply.ply_load("sphere.ply");
 
 
 
 	vector<point> points = ply.get_element_face_points();
 
-	vector<GLfloat> vertex = ply.get_vertex();
+	//vector<GLfloat> vertex = ply.get_vertex();
+	vector<GLfloat> vertex;
 	vector<GLushort> indices = ply.get_indices();
 	vector<point> norm = ply.get_normal_vector();
+#if 0
 	vector<GLfloat> normVertex;
 	for(int i = 0; i < norm.size(); i++) {
 		GLfloat x, y, z;
@@ -321,29 +348,72 @@ int main(){
 		normVertex.push_back(y);
 		normVertex.push_back(z);
 	}
-	GLuint vao, vbo[2], ibo;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-
-	glGenBuffers(3, vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GLfloat), &vertex[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-	glEnableVertexAttribArray(0);
-#if 0
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, normVertex.size() * sizeof(GLfloat), &normVertex[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void *)0);
-    	glEnableVertexAttribArray(1);
 #endif
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
-    	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLushort), indices.data(), GL_STATIC_DRAW );
+	for (int i = 0; i < points.size(); i++) {
+		vertex.push_back(points[i].x);
+		vertex.push_back(points[i].y);
+		vertex.push_back(points[i].z);
+		GLfloat x, y, z;
+		points[i].get_avg_vertex_normal(&x, &y, &z);
+		vertex.push_back(x);
+		vertex.push_back(y);
+		vertex.push_back(z);
+	}
 
-	glBindVertexArray(0);
-    	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+float vertices[] = {
+         0.5f,  0.5f, 0.0f,  // top right
+         0.5f, -0.5f, 0.0f,  // bottom right
+        -0.5f, -0.5f, 0.0f,  // bottom left
+        -0.5f,  0.5f, 0.0f   // top left 
+    };
+    unsigned int indices1[] = {  // note that we start from 0!
+        0, 1, 3,  // first Triangle
+        1, 2, 3   // second Triangle
+    };
+    unsigned int VBO, VAO, EBO;
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+//    glGenBuffers(1, &EBO);
+    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+    glBindVertexArray(VAO);
+	glCheckError();
 
-	glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    //glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GLfloat), &vertex[0], GL_STATIC_DRAW);
+	glCheckError();
+#if 0
+	GLuint normalbo;
+	glGenBuffers(1, &normalbo);
+	glBindBuffer(GL_ARRAY_BUFFER, normalbo);
+	glBufferData(GL_ARRAY_BUFFER, normVertex.size() * sizeof(GLfloat), &normVertex[0], GL_STATIC_DRAW);
+	glCheckError();
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLushort), &indices[0], GL_STATIC_DRAW);
+	glCheckError();
+#endif
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glCheckError();
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glCheckError();
+    //glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glEnableVertexAttribArray(0);
+	glCheckError();
+    glEnableVertexAttribArray(1);
+	glCheckError();
+
+    // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+    glBindBuffer(GL_ARRAY_BUFFER, 0); 
+
+    // remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
+    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
+    glBindVertexArray(0);
+
+	glCheckError();
 	GLfloat rot = 45.0f;
 	do {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -357,7 +427,7 @@ int main(){
 
 		// Camera matrix
 		glm::mat4 View = glm::lookAt(
-				glm::vec3(140,130,130), // Camera is at (4,3,3), in World Space
+				glm::vec3(4,3,3), // Camera is at (4,3,3), in World Space
 				glm::vec3(0,0,0), // and looks at the origin
 				glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
 				);
@@ -366,7 +436,7 @@ int main(){
 		glm::vec3 scale = glm::vec3(0.005f, 0.005f, 0.005f);
 		Model = glm::scale(Model, scale);
 		Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		Model = glm::rotate(Model, glm::radians(rot), glm::vec3(0.0f, 1.0f, 0.0f));
+		Model = glm::rotate(Model, glm::radians(rot), glm::vec3(0.0f, 0.0f, 1.0f));
 		rot = rot + 1;
 		if (rot > 360)
 			rot = 45.0f;
@@ -378,20 +448,18 @@ int main(){
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
 		GLuint ModelID = glGetUniformLocation(programID, "model");
 		glUniformMatrix4fv(ModelID, 1, GL_FALSE, &Model[0][0]);
-#if 0
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
+		GLuint ViewID = glGetUniformLocation(programID, "view");
+		glUniformMatrix4fv(ViewID, 1, GL_FALSE, &View[0][0]);
+		GLuint ProjectionID = glGetUniformLocation(programID, "projection");
+		glUniformMatrix4fv(ProjectionID, 1, GL_FALSE, &Projection[0][0]);
 
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void*)0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-#endif
-		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, (void *)0);
-		//glDrawArrays(GL_TRIANGLES, 0, vertex.size() * indices.size()); 		
-		//glDisableVertexAttribArray(0);
-		//glDisableVertexAttribArray(1);
-		// Swap buffers
+	 glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+	glCheckError();
+        glDrawArrays(GL_TRIANGLES, 0, vertex.size());
+        //glDrawElements(GL_TRIANGLES, vertex.size() + normVertex.size(), GL_UNSIGNED_SHORT, 0);	
+        //glDrawElements(GL_TRIANGLES, vertex.size() + normVertex.size(), GL_UNSIGNED_SHORT, 0);	
+	glCheckError();
+        //glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, 0);	
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -400,11 +468,6 @@ int main(){
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 			glfwWindowShouldClose(window) == 0 );
 
-	glDeleteBuffers(1, &vao);
-	glDeleteBuffers(1, &vbo[0]);
-	glDeleteBuffers(1, &vbo[1]);
-	glDeleteBuffers(1, &vbo[2]);
-	glDeleteBuffers(1, &ibo);
 	glDeleteProgram(programID);
 
 	glfwTerminate();
