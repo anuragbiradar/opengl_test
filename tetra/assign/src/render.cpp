@@ -11,9 +11,6 @@
 #include "FastTrackball.h"
 using namespace std;
 
-GLfloat light_amibent[] = {1.0, 0.0, 0.0, 0.0};
-GLfloat light_position[] = {1, 1.0, -1.3, 1.0};
-
 GLenum glCheckError_(const char *file, int line)
 {
 	GLenum errorCode;
@@ -76,10 +73,10 @@ void render::buildRecursive(GLfloat *fa, GLfloat *fb, GLfloat *fc, uint32_t f) {
 		for(j=0;j<3;j++) mid[2][j]=(fc[j]+fb[j])/2;
 		normalize(mid[2]);
 
- 		buildRecursive(fa, mid[1], mid[0], f-1);
-		buildRecursive(fc, mid[2], mid[1], f-1);
-		buildRecursive(fb, mid[0], mid[2], f-1);
-		buildRecursive(mid[0], mid[1], mid[2], f-1);
+ 		buildRecursive(fa, mid[0], mid[1], f-1);
+		buildRecursive(fc, mid[1], mid[2], f-1);
+		buildRecursive(fb, mid[2], mid[1], f-1);
+		buildRecursive(mid[0], mid[2], mid[1], f-1);
 	}
 	else {
 		//cout << "Adding to vector " << endl;
@@ -95,46 +92,6 @@ void render::buildRecursive(GLfloat *fa, GLfloat *fb, GLfloat *fc, uint32_t f) {
 }
 
 void render::buildData(ply_parser *parser, int f) {
-#if 0
-	glCheckError();
-	glGenVertexArrays(1, &VertexArrayID);
-	glCheckError();
-	glBindVertexArray(VertexArrayID);
-	glCheckError();
-
-	vector<point> points = parser->get_element_face_points();
-	vector<GLfloat> vertex;
-	for (int i = 0; i < points.size(); i++) {
-		vertex.push_back(points[i].x);
-		vertex.push_back(points[i].y);
-		vertex.push_back(points[i].z);
-	}
-	static const GLfloat g_vertex_buffer_data1[] = {
-		-1.0f, -1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f,
-		0.0f,  1.0f, 0.0f,
-	};
-	static const GLfloat g_vertex_buffer_data[] = {
-		1.0f, 1.0f, -1.0f,
-		1.0f, -1.0f, 1.0f,
-		-1.0f,  1.0f, 1.0f,
-		1.0f, 1.0f, -1.0f,
-		-1.0f, -1.0f, -1.0f,
-		1.0f, -1.0f, 1.0f,
-		-1.0f, 1.0f, 1.0f,
-		1.0f, -1.0f, 1.0f,
-		-1.0f, -1.0f, -1.0f,
-		-1.0f, -1.0f, -1.0f,
-		1.0f, 1.0f, -1.0f,
-		-1.0f, 1.0f, 1.0f,
-	};
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glCheckError();
-	//glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GL_FLOAT), &vertex[0], GL_STATIC_DRAW);
-	glCheckError();
-#endif
 	vertex.clear();
 	for (int i = 0; i < points.size(); i = i + 3) {
 		// get one triangle
@@ -144,7 +101,6 @@ void render::buildData(ply_parser *parser, int f) {
 		faces[2][0] = points[i + 2].x; faces[2][1] = points[i + 2].y; faces[2][2] = points[i + 2].z;
 		buildRecursive(faces[0], faces[1], faces[2], f);
 	}
-	cout << "TOTAL" << vertex.size() << endl;
 	glCheckError();
 	glGenVertexArrays(1, &VertexArrayID);
 	glCheckError();
@@ -153,14 +109,19 @@ void render::buildData(ply_parser *parser, int f) {
 	glGenBuffers(1, &vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
 	glCheckError();
+	GLfloat arr[vertex.size()];
+	copy(vertex.begin(), vertex.end(), arr);
 	//glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GL_FLOAT), &vertex[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GLfloat), arr, GL_STATIC_DRAW);
+
+	//glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GL_FLOAT), &vertex[0], GL_STATIC_DRAW);
 	glCheckError();
 }
 
 void render::drawTetra(ply_parser *parser, int f) {
 
 	points = parser->get_element_face_points();
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (f != prev_f) {
 		buildData(parser, f);
 		f = prev_f;
@@ -182,16 +143,19 @@ void render::drawTetra(ply_parser *parser, int f) {
 			);
 	// Model matrix : an identity matrix (model will be at the origin)
 	glm::mat4 Model = glm::mat4(1.0f);
-	static GLfloat sc = 0.005f;
+	static GLfloat sc = 1.0f;
 	glm::vec3 scale = glm::vec3(sc, sc, sc);
-	sc = sc + 0.001f;
-	//Model = glm::scale(Model, scale);
-	static GLfloat rot = 30.0f;
+	//sc = sc + 0.001f;
+//	Model = glm::scale(Model, scale);
+//	static GLfloat rot = 30.0f;
 	Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	Model = glm::rotate(Model, glm::radians(50.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	Model = glm::rotate(Model, glm::radians(60.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+#if 0
+	Model = glm::rotate(Model, glm::radians(rot), glm::vec3(0.0f, 1.0f, 0.0f));
 	if (rot >=360)
 		rot = 30;
 	rot = rot+2;
+#endif
 	// Our ModelViewProjection : multiplication of our 3 matrices
 	glm::mat4 mvp = Projection * View * Model; // Remember, matrix multiplication is the other way around
 	//glm::mat4 mvp = Model; // Remember, matrix multiplication is the other way around

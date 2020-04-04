@@ -325,19 +325,19 @@ int main(){
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
-	glGenBuffers(2, vbo);
+	glGenBuffers(3, vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GLfloat), &vertex[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 	glEnableVertexAttribArray(0);
-
+#if 0
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 	glBufferData(GL_ARRAY_BUFFER, normVertex.size() * sizeof(GLfloat), &normVertex[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, 0, (void *)0);
     	glEnableVertexAttribArray(1);
-
-	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, vbo[2] );
-    	glBufferData( GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLushort), indices.data(), GL_STATIC_DRAW );
+#endif
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
+    	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLushort), indices.data(), GL_STATIC_DRAW );
 
 	glBindVertexArray(0);
     	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -387,8 +387,8 @@ int main(){
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 #endif
-		//glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, (void *)0);
-		glDrawArrays(GL_TRIANGLES, 0, vertex.size() * indices.size()); 		
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_SHORT, (void *)0);
+		//glDrawArrays(GL_TRIANGLES, 0, vertex.size() * indices.size()); 		
 		//glDisableVertexAttribArray(0);
 		//glDisableVertexAttribArray(1);
 		// Swap buffers
