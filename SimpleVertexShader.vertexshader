@@ -6,21 +6,26 @@ layout(location = 1) in vec3 normals;
 
 out vec3 Normal;
 out vec3 FragPos;
+out vec3 objColor;
+out vec3 ligPos;
+out vec3 ligColor;
 
 // Values that stay constant for the whole mesh.
 uniform mat4 MVP;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
+
+uniform vec3 objectColor;
+uniform vec3 lightColor;
+uniform vec3 lightPos; 
   
 void main(){
-  // Output position of the vertex, in clip space : MVP * position
-  FragPos = vec3(model * vec4(vertexPosition_modelspace, 1.0));
-//    Normal = normals;
-    Normal = mat3(transpose(inverse(model))) * normals;
- // gl_Position = MVP * vec4(vertexPosition_modelspace,1);
+	FragPos = vec3(model * vec4(vertexPosition_modelspace, 1.0));
+	Normal = mat3(transpose(inverse(model))) * normals;
+	//Normal = mat3(model) * normals;
 	gl_Position = projection * view * vec4(FragPos, 1.0);
-  //gl_Position = vec4(vertexPosition_modelspace,1);
-  //FragPos = vec3(model * vec4(position, 1.0f));
-  //Normal = model * vec4(normals, 0);
+	objColor = vec3(objectColor);
+	ligPos = vec3(lightPos);
+	ligColor = vec3(lightColor);
 }

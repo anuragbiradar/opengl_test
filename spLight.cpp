@@ -182,7 +182,6 @@ void ply_reader::ply_load(const char *file_path)
 			sscanf(line, "%d %d %d %d", &num, &v1, &v2, &v3);
 		point normalv;
 		calculateNormal(&vertices[v1], &vertices[v2], &vertices[v3], &normalv);
-		cout << "Normal " << normalv.x << " " << normalv.y << " " << normalv.z << endl;
 		this->normal.push_back(normalv);
 		vertices[v1].set_vertex_normal(normalv.x, normalv.y, normalv.z);
 		vertices[v2].set_vertex_normal(normalv.x, normalv.y, normalv.z);
@@ -193,13 +192,11 @@ void ply_reader::ply_load(const char *file_path)
 		indices.push_back(v1);
 		indices.push_back(v2);
 		indices.push_back(v3);
-		cout << "indices " << v1 << " " << v2 << " " << v3 <<" " << v4 << endl;
 		if (line[0] == '4') {
 			vertices[v4].set_vertex_normal(normalv.x, normalv.y, normalv.z);
 			points.push_back(vertices[v4]);
 			indices.push_back(v4);
 		}
-		cout << points[0].x << points[1].y << points[2].z << endl;
 	}
 }
 
@@ -398,8 +395,8 @@ float vertices[] = {
 	glCheckError();
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	//glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GLfloat), &vertex[0], GL_STATIC_DRAW);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(GLfloat), &vertex[0], GL_STATIC_DRAW);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	glCheckError();
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
@@ -433,14 +430,17 @@ float vertices[] = {
 
 	glCheckError();
 	GLfloat rot = 45.0f;
+	glm::vec3 LightPos(10.2f, -10.0f, -10.0f);
 	do {
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(programID);
 
+		glCheckError();
 		// Projection matrix : 45° Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
 		glm::mat4 Projection = glm::perspective(glm::radians(45.0f), (float) SCR_WIDTH/ (float) SCR_HEIGHT, 0.1f, 100.0f);
 
+		glCheckError();
 		// Or, for an ortho camera :
 		//glm::mat4 Projection = glm::ortho(-10.0f,10.0f,-10.0f,10.0f,0.0f,100.0f); // In world coordinates
 
@@ -451,12 +451,14 @@ float vertices[] = {
 				glm::vec3(0,0,0), // and looks at the origin
 				glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
 				);
+		glCheckError();
 		// Model matrix : an identity matrix (model will be at the origin)
 		glm::mat4 Model = glm::mat4(1.0f);
 		glm::vec3 scale = glm::vec3(0.005f, 0.005f, 0.005f);
-		//Model = glm::scale(Model, scale);
-		Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		Model = glm::rotate(Model, glm::radians(rot), glm::vec3(0.0f, 0.0f, 1.0f));
+		Model = glm::scale(Model, scale);
+		//Model = glm::rotate(Model, glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		//Model = glm::rotate(Model, glm::radians(rot), glm::vec3(0.0f, 0.0f, 1.0f));
+		glCheckError();
 		rot = rot + 1;
 		if (rot > 360)
 			rot = 45.0f;
@@ -474,24 +476,28 @@ float vertices[] = {
 		GLuint ProjectionID = glGetUniformLocation(programID, "projection");
 		glUniformMatrix4fv(ProjectionID, 1, GL_FALSE, &Projection[0][0]);
 		glCheckError();
-		glm::vec3 LightPos(1.2f, 1.0f, 2.0f);
-		glm::vec3 LightColor(1.0f, 1.0f, 1.0f);
-		glm::vec3 ObjectColor(1.0f, 0.5f, 0.31f);
+		glm::vec3 ObjectColor(1.0f, 0.0f, 0.0f);
 		GLuint ObjectColorID = glGetUniformLocation(programID, "objectColor");
-		glUniformMatrix4fv(ObjectColorID, 1, GL_FALSE, glm::value_ptr(ObjectColor));
-		glCheckError();
+		glUniform3fv(ObjectColorID, 1, &ObjectColor[0]);
+		glm::vec3 LightColor(1.0f, 1.0f, 1.0f);
 		GLuint lightColorID = glGetUniformLocation(programID, "lightColor");
-		glUniformMatrix4fv(lightColorID, 1, GL_FALSE, glm::value_ptr(LightColor));
+		glUniform3fv(lightColorID, 1, glm::value_ptr(LightColor));
 		glCheckError();
+#if 1
+		LightPos.x = sin(glfwGetTime()) * 3.0f;
+        	LightPos.z = cos(glfwGetTime()) * 2.0f;
+		LightPos.y = 5.0 + cos(glfwGetTime()) * 1.0f;
+#endif
 		GLuint lightPosID = glGetUniformLocation(programID, "lightPos");
-		glUniformMatrix4fv(lightPosID, 1, GL_FALSE, glm::value_ptr(LightPos));
+		glUniform3fv(lightPosID, 1, &LightPos[0]);
 
 		glCheckError();
 		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 		glCheckError();
-		//glDrawArrays(GL_TRIANGLES, 0, vertex.size());
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glDrawArrays(GL_TRIANGLES, 0, vertex.size());
+		//glDrawArrays(GL_TRIANGLES, 0, 36);
 		glCheckError();
+#if 0
 		glUseProgram(programIDLight);
 		Model = glm::mat4(1.0f);
        		Model = glm::translate(Model, LightPos);
@@ -508,9 +514,10 @@ float vertices[] = {
         	glBindVertexArray(lightVAO);
         	//glDrawArrays(GL_TRIANGLES, 0, vertex.size());	
         	glDrawArrays(GL_TRIANGLES, 0, 36);	
-
+#endif
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+		//break;
 
 	} // Check if the ESC key was pressed or the window was closed
 	while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
