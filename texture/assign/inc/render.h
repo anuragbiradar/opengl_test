@@ -17,20 +17,25 @@ class render {
 		uint32_t SCR_HEIGHT;
 		GLuint program_id;
 		unsigned int VBO, VAO;
+		GLuint uvbuffer;
 		vector<point> points;
 		uint32_t prev_f;
 		vector<GLfloat> vertex;
+		std::vector<glm::vec3> vertices;
+		std::vector<glm::vec2> uvs;
+		std::vector<glm::vec3> normals; // Won't be used at the moment.
+		GLuint Texture;
+
 		glm::mat4 Projection;
 		glm::mat4 View;
-		float moveObject;
 	public:
 		render();
 		~render();
 		void init_render(int width, int height, ply_parser *parser);
 		GLuint LoadShaders(const char *vert_file, const char *frag_file);
 		void setView();
-		void drawSphere(ply_parser *parser, glm::vec3 translation, float diffStrength, float specularStrength, int pos,
-				int lightTranslate0, int lightTranslate1, int translate);
-		void drawSpheres(ply_parser *parser, int lightTranslate0, int lightTranslate1, int translate); 
+		void drawSphere(ply_parser *parser, glm::vec3 translation, bool lightRot);
+		void drawSpheres(ply_parser *parser, bool lightRot, bool translate); 
+		void drawObject(ply_parser *parser, bool lightRot, bool translate); 
 };
 #endif

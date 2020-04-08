@@ -18,7 +18,11 @@ void handleKeys(GLFWwindow* window, int key, int code, int action, int mode);
 class window_mgmt {
 
 	private:
-		int translate, lighttranslate0, lighttranslate1;
+		GLfloat base_scale;
+		GLfloat scale, x, y;
+		uint32_t rotate;
+		uint32_t f;
+		bool rotate_x, rotate_y, rotate_z;
 		mesh_object_type mesh_object;
 		GLFWwindow *mainWindow;
 		uint8_t parse_top;
@@ -33,10 +37,12 @@ class window_mgmt {
 };
 
 window_mgmt window_mgmr;
-
 window_mgmt::window_mgmt() {
-	translate = lighttranslate0 = lighttranslate1 = 0;
+	base_scale = 0.2;
+	scale = x = y = rotate = 0;
+	rotate_x = rotate_y = rotate_z = 0;
 	parse_top = 0;
+	f = 0;
 	mesh_object = MESH_OBJECT_1;
 }
 
@@ -90,8 +96,7 @@ void window_mgmt::window_mainloop_run() {
   	{
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		render_obj.drawSpheres(parser[0], lighttranslate0, lighttranslate1, translate);
-		lighttranslate0 = lighttranslate1 = translate = 0;
+		render_obj.drawObject(parser[0], 0, 0);
 		glfwSwapBuffers(mainWindow);
 		glfwPollEvents();
 		glfwSetKeyCallback(mainWindow, handleKeys);
@@ -99,22 +104,41 @@ void window_mgmt::window_mainloop_run() {
 }
 
 void window_mgmt::window_handle_event(int key, int code, int action, int mode) {
-	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-		if (mesh_object == MESH_OBJECT_1) translate = -1;
-		if (mesh_object == MESH_OBJECT_2) lighttranslate0 = -1;
-		if (mesh_object == MESH_OBJECT_3) lighttranslate1 = -1;
-	}
-  	if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
-		if (mesh_object == MESH_OBJECT_1) translate = 1;
-		if (mesh_object == MESH_OBJECT_2) lighttranslate0 = 1;
-		if (mesh_object == MESH_OBJECT_3) lighttranslate1 = 1;
-	}
+	if (key == GLFW_KEY_EQUAL && action == GLFW_PRESS)
+   		scale += 0.05;
+  	if (key == GLFW_KEY_MINUS && action == GLFW_PRESS)
+		f += 1;
+	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+    	x -= 0.05;
+  	if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+   		x += 0.05;
+  	if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+    	y += 0.05;
+  	if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+    	y -= 0.05;
+	if (key == 'R' && action == GLFW_PRESS)
+		rotate = 1;
 	if (key == '1' && action == GLFW_PRESS)
 		mesh_object = MESH_OBJECT_1;
 	if (key == '2' && action == GLFW_PRESS)
 		mesh_object = MESH_OBJECT_2;
 	if (key == '3' && action == GLFW_PRESS)
 		mesh_object = MESH_OBJECT_3;
+	if (key == 'X' && action == GLFW_PRESS) {
+		rotate_x = 1;
+		rotate = 1;
+		rotate_y = rotate_z = 0;
+	}
+	if (key == 'Y' && action == GLFW_PRESS) {
+		rotate_y = 1;
+		rotate = 1;
+		rotate_x = rotate_z = 0;
+	}
+	if (key == 'Z' && action == GLFW_PRESS) {
+		rotate_z = 1;
+		rotate = 1;
+		rotate_x = rotate_y = 0;
+	}
 }
 
 void handleKeys(GLFWwindow* window, int key, int code, int action, int mode)

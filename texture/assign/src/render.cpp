@@ -10,33 +10,10 @@
 
 #include "render.h"
 #include "FastTrackball.h"
+#include "objloader.h"
+#include "texture.h"
 using namespace std;
-glm::vec3 LightPos(5.0f, 5.0f, -6.0f);
-glm::vec3 LightPos1(6.0f, 6.0f, -6.0f);
-
-glm::vec3 positions[] = {
-	// Last Col (Bottom to Top)
-	glm::vec3(0.0f, 0.0f, -6.0f), 
-	glm::vec3(0.0f, 0.0f, -6.0f),
-	glm::vec3(4.0f, -2.0f, -2.0f), 
-	glm::vec3(4.0f, -2.0f, -2.0f),
-	glm::vec3(0.0f, 11.0f, -8.0f), 
-	glm::vec3(0.0f, 11.0f, -8.0f),
-	// Middle Col
-	glm::vec3(5.0f, 5.0f, -6.0f), 
-	glm::vec3(6.0f, 5.0f, -6.0f),
-	glm::vec3(5.0f, 5.0f, -6.0f), 
-	glm::vec3(6.0f, 5.0f, -6.0f),
-	glm::vec3(5.0f, 5.0f, -6.0f), 
-	glm::vec3(6.0f, 5.0f, -6.0f),
-	// First Col
-	glm::vec3(5.0f, 5.0f, -6.0f), 
-	glm::vec3(6.0f, 5.0f, -6.0f),
-	glm::vec3(5.0f, 5.0f, -6.0f), 
-	glm::vec3(6.0f, 5.0f, -6.0f),
-	glm::vec3(5.0f, 5.0f, -6.0f), 
-	glm::vec3(6.0f, 5.0f, -6.0f)
-};
+glm::vec3 LightPos(1.2f, -1.0f, -1.0f);
 
 GLenum glCheckError_(const char *file, int line)
 {
@@ -61,7 +38,6 @@ GLenum glCheckError_(const char *file, int line)
 #define glCheckError() glCheckError_(__FILE__, __LINE__) 
 
 render::render() {
-	moveObject = 0.0f;
 }
 
 render::~render() {
@@ -71,10 +47,11 @@ render::~render() {
 }
 
 void render::init_render(int width, int height, ply_parser *parser) {
-	program_id = LoadShaders("data/sphere.vs", "data/sphere1.fs");
+	program_id = LoadShaders("data/sphere.vs", "data/sphere.fs");
 	SCR_WIDTH = width;
 	SCR_HEIGHT = height;
 	glEnable(GL_DEPTH_TEST);
+#if 0 
 	points = parser->get_element_face_points();
 	for (int i = 0; i < points.size(); i++) {
 		vertex.push_back(points[i].x);
@@ -108,15 +85,45 @@ void render::init_render(int width, int height, ply_parser *parser) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0); 
 
 	glBindVertexArray(0);
-#if 0
-	unsigned int lightVAO;
-	glGenVertexArrays(1, &lightVAO);
-	glBindVertexArray(lightVAO);
+#endif
+	// Read our .obj file
+	glCheckError();
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glBindVertexArray(VAO);
+	//bool res = loadOBJ("data/cube.obj", vertices, uvs, normals);
+	bool res = loadOBJ("data/box.obj", vertices, uvs, normals);
+	cout << "Seize " << vertices.size() << " " << uvs.size() << " " << normals.size() << endl;
+	// Load it into a VBO
+	for (int i = 0; i < vertices.size(); i++) {
+		vertex.push_back(vertices[i].x);
+		vertex.push_back(vertices[i].y);
+		vertex.push_back(vertices[i].z);
+		vertex.push_back(uvs[i].x);
+		vertex.push_back(uvs[i].y);
+		vertex.push_back(normals[i].x);
+		vertex.push_back(normals[i].y);
+		vertex.push_back(normals[i].z);
+	}
+
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, vertex.size() * sizeof(glm::vec3), &vertex[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (2*sizeof(float)));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*) (3*sizeof(float)));
 	glEnableVertexAttribArray(0);
-#endif
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, 0); 
+	glBindVertexArray(0);
+	//Texture = loadDDS("data/uvmap.DDS");
+	//Texture = loadDDS("data/earth.dds");
+	//Texture = loadBMP_custom("data/uvtemplate.bmp");
+	//Texture = loadBMP_custom("data/normal.bmp");
+	//Texture = loadBMP_custom("data/screenshot.bmp");
+	//Texture = loadBMP_custom("data/number.bmp");
+	Texture = loadBMP_custom("data/one.bmp");
 	return;
 }
 
@@ -137,7 +144,7 @@ void render::setView() {
 	GLuint ProjectionID = glGetUniformLocation(program_id, "projection");
 	glUniformMatrix4fv(ProjectionID, 1, GL_FALSE, &Projection[0][0]);
 	glCheckError();
-
+#if 0
 	glm::vec3 ObjectColor(1.0f, 0.0f, 0.0f);
 	GLuint ObjectColorID = glGetUniformLocation(program_id, "objectColor");
 	glUniform3fv(ObjectColorID, 1, &ObjectColor[0]);
@@ -146,56 +153,23 @@ void render::setView() {
 	GLuint lightColorID = glGetUniformLocation(program_id, "lightColor");
 	glUniform3fv(lightColorID, 1, glm::value_ptr(LightColor));
 	glCheckError();
-
+#endif
 	glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 }
 
-void render::drawSphere(ply_parser *parser, glm::vec3 translation, float diffStrength, float specularStrength, int pos, int lightTranslate0, int lightTranslate1, int translate) {
-	
-	if (lightTranslate0 != 0)
-	{
-#if 0
-		if (lightTranslate0 == 1) {
-			positions[pos].x += 10.5f;
-			positions[pos].y += 1.5f;
-		} else {
-			positions[pos].x -= 10.5f;
-			positions[pos].y -= 1.5f;
-		}
-#endif
-		positions[pos].x = positions[pos].x + sin(glfwGetTime());
-		positions[pos].y = positions[pos].z + cos(glfwGetTime());
-	}
-	//cout << "POS " << positions[pos].x << endl;
-	if (lightTranslate1 != 0) {
-#if 0
-		if (lightTranslate1 == 1) {
-			positions[pos+1].x += 1.5f;
-			positions[pos+1].y += 1.5f;
-		} else {
-			positions[pos+1].x -= 1.5f;
-			positions[pos+1].y -= 1.5f;
-		}
-#endif
-		positions[pos+1].x = positions[pos+1].x + sin(glfwGetTime());
-		positions[pos+1].y = positions[pos+1].z + cos(glfwGetTime());
-	}
-	if (translate != 0) {
-		if (translate == 1) {
-			moveObject += 1.5f;
-			translation.x += moveObject;
-		} else {
-			moveObject -= 1.5f;
-			translation.x -= moveObject;
-		}
-		cout << "Move object " << translation.x << endl;
-	}
+void render::drawSphere(ply_parser *parser, glm::vec3 translation, bool lightRot) {
 	// Model matrix : an identity matrix (model will be at the origin)
 	glm::mat4 Model = glm::translate(glm::mat4(1.0f), translation);
-	glm::vec3 scale = glm::vec3(0.006f, 0.006f, 0.006f);
+	glm::vec3 scale = glm::vec3(3.0f);
 	Model = glm::scale(Model, scale);
-	//Model = glm::rotate(Model, glm::radians(30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	Model = glm::rotate(Model, glm::radians(30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	static GLfloat rot = 30.0f;
+	Model = glm::rotate(Model, glm::radians(rot), glm::vec3(0.0f, 1.0f, 0.0f));
 	glCheckError();
+	rot += 2;
+	if (rot >= 360)
+		rot = 30.0f;
+
 #if 0
 	LightPos.x = sin(glfwGetTime()) * 3.0f;
 	LightPos.z = cos(glfwGetTime()) * 2.0f;
@@ -203,20 +177,9 @@ void render::drawSphere(ply_parser *parser, glm::vec3 translation, float diffStr
 	LightPos.x += translation.x;
 	LightPos.y += translation.y;
 	LightPos.z += translation.z;
+	GLuint lightPosID = glGetUniformLocation(program_id, "lightPos");
+	glUniform3fv(lightPosID, 1, &LightPos[0]);
 #endif
-	GLuint lightPosID0 = glGetUniformLocation(program_id, "lightPos0");
-	//glUniform3fv(lightPosID0, 1, &LightPos[0]);
-	glUniform3fv(lightPosID0, 1, &positions[pos][0]);
-
-	GLuint lightPosID1 = glGetUniformLocation(program_id, "lightPos1");
-	//glUniform3fv(lightPosID1, 1, &LightPos1[0]);
-	glUniform3fv(lightPosID1, 1, &positions[pos+1][0]);
-
-	GLuint diffusedStrengthID = glGetUniformLocation(program_id, "diffuseStrength");
-	glUniform1f(diffusedStrengthID, diffStrength);
-
-	GLuint specularStrengthID = glGetUniformLocation(program_id, "specularStrength");
-	glUniform1f(specularStrengthID, specularStrength);
 
 	Model = glm::translate(Model, translation);
 	GLuint ModelID = glGetUniformLocation(program_id, "model");
@@ -224,7 +187,30 @@ void render::drawSphere(ply_parser *parser, glm::vec3 translation, float diffStr
 	glDrawArrays(GL_TRIANGLES, 0, vertex.size());
 }
 
-void render::drawSpheres(ply_parser *parser, int lightTranslate0, int lightTranslate1, int translate) {
+void render::drawObject(ply_parser *parser, bool lightRot, bool translate) {
+	glCheckError();
+	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glCheckError();
+	glUseProgram(program_id);
+	glCheckError();
+	setView();
+
+	GLuint TextureID  = glGetUniformLocation(program_id, "myTextureSampler");
+	glCheckError();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, Texture);
+	glCheckError();
+	// Set our "myTextureSampler" sampler to use Texture Unit 0
+	glUniform1i(TextureID, 0);
+	glCheckError();
+
+
+	drawSphere(parser, glm::vec3(0.0f,  0.0f, 0.0f), lightRot);
+}
+
+void render::drawSpheres(ply_parser *parser, bool lightRot, bool translate) {
 
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -232,22 +218,16 @@ void render::drawSpheres(ply_parser *parser, int lightTranslate0, int lightTrans
 	glUseProgram(program_id);
 	glCheckError();
 	setView();
+	//drawSphere(parser, glm::vec3(0.0f,  -2.0f, 0.0f), lightRot);
+	drawSphere(parser, glm::vec3(0.0f,  0.0f, 0.0f), lightRot);
 #if 0
-	// (Middle Column) Column wise First is bottom
-	drawSphere(parser, glm::vec3(0.0f,  -2.0f, 0.0f), 0.0, 0.5, 6, lightTranslate0, lightTranslate1, translate);
-	drawSphere(parser, glm::vec3(0.0f,  0.0f, 0.0f), 0.5, 0.5, 8, lightTranslate0, lightTranslate1, translate);
-	drawSphere(parser, glm::vec3(0.0f,  2.0f, 0.0f), 1.0, 0.5, 10, lightTranslate0, lightTranslate1, translate);
-#endif
-#if 1
-	// Last Column
-	drawSphere(parser, glm::vec3(-2.0f,  -2.0f, 0.0f), 0.0, 1.0, 0, lightTranslate0, lightTranslate1, translate);
-	drawSphere(parser, glm::vec3(-2.0f,  0.0f, 0.0f), 0.5, 1.0, 2, lightTranslate0, lightTranslate1, translate);
-	drawSphere(parser, glm::vec3(-2.0f,  2.0f, 0.0f), 1.0, 1.0, 4, lightTranslate0, lightTranslate1, translate);
-#endif
-#if 0
-	drawSphere(parser, glm::vec3(2.0f,  -2.0f, 0.0f), 0.0, 0.0, 12, lightTranslate0, lightTranslate1, translate);
-	drawSphere(parser, glm::vec3(2.0f,  0.0f, 0.0f), 0.5, 0.0, 14, lightTranslate0, lightTranslate1, translate);
-	drawSphere(parser, glm::vec3(2.0f,  2.0f, 0.0f), 1.0, 0.0, 16, lightTranslate0, lightTranslate1, translate);
+	drawSphere(parser, glm::vec3(0.0f,  2.0f, 0.0f), lightRot);
+	drawSphere(parser, glm::vec3(-2.0f,  -2.0f, 0.0f), lightRot);
+	drawSphere(parser, glm::vec3(-2.0f,  0.0f, 0.0f), lightRot);
+	drawSphere(parser, glm::vec3(-2.0f,  2.0f, 0.0f), lightRot);
+	drawSphere(parser, glm::vec3(2.0f,  -2.0f, 0.0f), lightRot);
+	drawSphere(parser, glm::vec3(2.0f,  0.0f, 0.0f), lightRot);
+	drawSphere(parser, glm::vec3(2.0f,  2.0f, 0.0f), lightRot);
 #endif
 }
 

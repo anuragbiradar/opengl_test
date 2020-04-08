@@ -7,30 +7,30 @@ in vec3 objColor;
 in vec3 ligPos;
 in vec3 ligColor;
 
+uniform float diffuseStrength;
+uniform float specularStrength;
+
 void main()
 {
 	//3.2 matrial exer
-	// ambient
-	float ambientStrength = 0.5;
+	float ambientStrength = 0.1;
 	vec3 ambient = ambientStrength * ligColor;
 
 	// diffuse
-	float diffuseStrength = 0.9;
 	vec3 norm = normalize(Normal);
 	vec3 lightDir = normalize(FragPos - ligPos);
 	//float diff = clamp(dot(norm, lightDir), 0.0, 1.0);
 	float diff = max(dot(norm, lightDir), 1.0);
-	//vec3 diffuse = diff * diffuseStrength * ligColor;
-	vec3 diffuse = ligColor * (diff * vec3(0.0f, 0.50980392f, 0.50980392f));
+	vec3 diffuse = diff * diffuseStrength * ligColor;
+	//vec3 diffuse = ligColor * (diff * vec3(0.0f, 0.50980392f, 0.50980392f));
 
 	// Specular
-	float specularStrength = 0.9;
 	vec3 E = normalize(vec3(10.0f, 10.0f, -50.0f));
 	vec3 viewDir = normalize(E - FragPos);
 	vec3 reflectDir = reflect(-lightDir, norm);  
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 10.0f);
-	vec3 specular = ligColor * (spec * vec3(1.0f, 1.0f, 1.0f));
-	//vec3 specular = specularStrength * spec * ligColor;
+	//vec3 specular = ligColor * (spec * vec3(1.0f, 1.0f, 1.0f));
+	vec3 specular = specularStrength * spec * ligColor;
 
 	//Attenuation
 	float distance = length(FragPos - ligPos);
